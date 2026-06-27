@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CyberShield Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+
+</head>
+
+<body>
+
+    <h1>CyberShield Analytics Dashboard</h1>
+
+    <div class="cards">
+
+        <div class="card">
+            <h2>Total</h2>
+            <span id="total">0</span>
+        </div>
+
+        <div class="card">
+            <h2>Cyberbullying</h2>
+            <span id="cyber">0</span>
+        </div>
+
+        <div class="card">
+            <h2>Safe</h2>
+            <span id="safe">0</span>
+        </div>
+
+        <div class="card">
+            <h2>High</h2>
+            <span id="high">0</span>
+        </div>
+
+        <div class="card">
+            <h2>Medium</h2>
+            <span id="medium">0</span>
+        </div>
+
+        <div class="card">
+            <h2>Low</h2>
+            <span id="low">0</span>
+        </div>
+
+    </div>
+
+    <div class="chart-container">
+
+        <canvas id="chart"></canvas>
+
+    </div>
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Comment</th>
+
+                <th>Prediction</th>
+
+                <th>Confidence</th>
+
+                <th>Severity</th>
+
+                <th>Time</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody id="history">
+
+        </tbody>
+
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+</body>
+
+</html>

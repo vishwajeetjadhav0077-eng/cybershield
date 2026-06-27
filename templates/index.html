@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CyberShield — AI Comment Safety</title>
+<style>
+  :root {
+    --bg:       #0a0f1e;
+    --surface:  #111827;
+    --card:     #1e293b;
+    --border:   #2d3748;
+    --accent:   #38bdf8;
+    --accent2:  #818cf8;
+    --green:    #34d399;
+    --red:      #f87171;
+    --orange:   #fb923c;
+    --yellow:   #fbbf24;
+    --text:     #f1f5f9;
+    --muted:    #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-size: 1.3rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 24px; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: .9rem; transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 64px 24px 32px;
+  }
+  .hero h1 { font-size: 2.8rem; font-weight: 800; line-height: 1.15; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--muted); margin-top: 12px; font-size: 1.1rem; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 24px 16px 0; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 20px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; font-size: .9rem;
+    transition: all .2s;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #0a0f1e; font-weight: 600; }
+
+  /* ── PANELS ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── CHECKER ── */
+  .checker-wrap { max-width: 700px; margin: 32px auto; padding: 0 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .card h2 { font-size: 1.25rem; margin-bottom: 16px; }
+  textarea {
+    width: 100%; min-height: 120px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); padding: 12px 14px; font-size: 1rem;
+    resize: vertical; outline: none; transition: border-color .2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .btn {
+    padding: 10px 22px; border-radius: 8px; border: none;
+    cursor: pointer; font-size: .95rem; font-weight: 600; transition: all .2s;
+  }
+  .btn-primary { background: var(--accent); color: #0a0f1e; }
+  .btn-primary:hover { background: #7dd3fc; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #374151; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── RESULT CARD ── */
+  .result-box { margin-top: 20px; border-radius: 12px; padding: 20px; display: none; }
+  .result-box.safe     { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.3); }
+  .result-box.bullying { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.3); }
+  .result-box.medium   { background: rgba(251,146,60,.08);  border: 1px solid rgba(251,146,60,.3); }
+  .result-icon { font-size: 2rem; }
+  .result-title { font-size: 1.3rem; font-weight: 700; margin: 4px 0; }
+  .result-meta { color: var(--muted); font-size: .9rem; }
+  .confidence-bar-wrap { margin-top: 12px; }
+  .confidence-bar-wrap label { font-size: .85rem; color: var(--muted); }
+  .bar-bg { background: var(--border); border-radius: 6px; height: 8px; margin-top: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width .6s ease; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: .78rem; font-weight: 600; margin-top: 8px;
+  }
+  .badge-red    { background: rgba(248,113,113,.2); color: #f87171; }
+  .badge-orange { background: rgba(251,146,60,.2);  color: #fb923c; }
+  .badge-yellow { background: rgba(251,191,36,.2);  color: #fbbf24; }
+  .badge-green  { background: rgba(52,211,153,.2);  color: #34d399; }
+  .spinner {
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; width: 22px; height: 22px;
+    animation: spin .7s linear infinite; display: none; margin: auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── API SECTION ── */
+  .api-wrap { max-width: 820px; margin: 32px auto; padding: 0 16px; }
+  .endpoint { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .method { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: .8rem; font-weight: 700; margin-right: 8px; }
+  .method.post { background: rgba(56,189,248,.15); color: var(--accent); }
+  .method.get  { background: rgba(52,211,153,.15); color: var(--green); }
+  .endpoint-path { font-family: monospace; font-size: 1rem; }
+  .endpoint p { color: var(--muted); margin: 8px 0; font-size: .9rem; }
+  pre {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; overflow-x: auto; font-size: .82rem; line-height: 1.6;
+    color: #e2e8f0; margin-top: 10px;
+  }
+  pre .key   { color: #7dd3fc; }
+  pre .str   { color: #a5f3fc; }
+  pre .num   { color: #86efac; }
+  pre .bool  { color: #fca5a5; }
+
+  /* ── STATS ── */
+  .stats-wrap { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+  .stat-num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .stat-label { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+  .cat-list { list-style: none; }
+  .cat-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+  }
+  .cat-list li:last-child { border-bottom: none; }
+  .cat-bar-bg { width: 120px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .cat-bar    { height: 100%; background: var(--accent); border-radius: 3px; }
+  .refresh-btn { float: right; }
+
+  /* ── INSTALL ── */
+  .install-wrap { max-width: 780px; margin: 32px auto; padding: 0 16px; }
+  .step { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step-num {
+    min-width: 36px; height: 36px; border-radius: 50%;
+    background: var(--accent); color: #0a0f1e; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: .95rem;
+  }
+  .step-body h3 { margin-bottom: 6px; }
+  .step-body p, .step-body li { color: var(--muted); font-size: .9rem; line-height: 1.7; }
+  .step-body ul { padding-left: 18px; }
+  code {
+    background: var(--border); padding: 2px 7px; border-radius: 4px;
+    font-family: monospace; font-size: .85rem; color: var(--accent);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center; color: var(--muted); font-size: .8rem;
+    padding: 32px 16px; border-top: 1px solid var(--border); margin-top: 48px;
+  }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 2rem; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🛡️ Cyber<span>Shield</span></div>
+  <div class="nav-links">
+    <a href="#" onclick="showTab('checker')">Checker</a>
+    <a href="#" onclick="showTab('api')">API</a>
+    <a href="#" onclick="showTab('stats')">Stats</a>
+    <a href="#" onclick="showTab('install')">Extension</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>AI-Powered <span>Comment Safety</span></h1>
+  <p>Detect cyberbullying in real-time using DistilBERT — free, open, and deployable anywhere.</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('checker')">💬 Try It</button>
+  <button class="tab-btn" onclick="showTab('api')">⚡ API</button>
+  <button class="tab-btn" onclick="showTab('stats')">📊 Stats</button>
+  <button class="tab-btn" onclick="showTab('install')">🔌 Extension</button>
+</div>
+
+<!-- ─────────────── CHECKER ─────────────── -->
+<div id="tab-checker" class="tab-panel active">
+  <div class="checker-wrap">
+    <div class="card">
+      <h2>🔍 Check a Comment</h2>
+      <textarea id="inputText" placeholder="Paste any comment, tweet, or message here…"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="checkText()">Analyze</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+      </div>
+      <div class="spinner" id="spinner"></div>
+      <div class="result-box" id="resultBox">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-meta" id="resultMeta"></div>
+        <span class="badge" id="severityBadge"></span>
+        <div class="confidence-bar-wrap">
+          <label id="barLabel"></label>
+          <div class="bar-bg"><div class="bar-fill" id="barFill"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server-side result (from form POST) -->
+    {% if result %}
+    <div class="card" style="margin-top:16px">
+      <strong>Server result:</strong>
+      {% if result.result == 1 %}
+        <p style="color:var(--red);margin-top:8px">
+          ⚠️ Cyberbullying Detected — {{ result.category }} ({{ result.confidence }}% confidence)
+        </p>
+      {% else %}
+        <p style="color:var(--green);margin-top:8px">
+          ✅ Not Cyberbullying ({{ result.confidence }}% confidence)
+        </p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ─────────────── API DOCS ─────────────── -->
+<div id="tab-api" class="tab-panel">
+  <div class="api-wrap">
+    <h2 style="margin-bottom:20px">API Reference</h2>
+    <p style="color:var(--muted);margin-bottom:24px;font-size:.95rem">
+      All endpoints accept and return JSON. Replace <code>YOUR_URL</code> with your deployment URL.
+    </p>
+
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/health</span>
+      <p>Check if the API is running.</p>
+<pre><span class="key">"status"</span>: <span class="str">"ok"</span>,
+<span class="key">"device"</span>: <span class="str">"cpu"</span></pre>
+    </div>
+
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/predict</span>
+      <p>Analyze a single comment. Accepts JSON body <code>{"text":"..."}</code> or form-encoded <code>text=...</code>.</p>
+<pre><span class="key">"result"</span>:     <span class="num">1</span>,          <span style="color:#64748b">// 0 = safe, 1 = bullying</span>
+<span class="key">"category"</span>:   <span class="str">"gender"</span>,   <span style="color:#64748b">// age | ethnicity | gender | religion | other_cyberbullying | not_cyberbullying</span>
+<span class="key">"confidence"</span>: <span class="num">91.4</span>,       <span style="color:#64748b">// 0–100</span>
+<span class="key">"severity"</span>:   <span class="str">"high"</span>      <span style="color:#64748b">// none | low | medium | high</span></pre>
+    </div>
+
+    <div class="endpoint">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/predict/batch</span>
+      <p>Analyze up to 50 comments at once.</p>
+<pre><span style="color:#64748b">// Request</span>
+{ <span class="key">"texts"</span>: [<span class="str">"comment 1"</span>, <span class="str">"comment 2"</span>] }
+
+<span style="color:#64748b">// Response — array in same order</span>
+[
+  { <span class="key">"result"</span>: <span class="num">0</span>, <span class="key">"category"</span>: <span class="str">"not_cyberbullying"</span>, <span class="key">"confidence"</span>: <span class="num">96.2</span>, <span class="key">"severity"</span>: <span class="str">"none"</span> },
+  { <span class="key">"result"</span>: <span class="num">1</span>, <span class="key">"category"</span>: <span class="str">"ethnicity"</span>,         <span class="key">"confidence"</span>: <span class="num">87.5</span>, <span class="key">"severity"</span>: <span class="str">"high"</span> }
+]</pre>
+    </div>
+
+    <div class="endpoint">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/stats</span>
+      <p>Usage analytics — total checks, flagged rate, category breakdown.</p>
+    </div>
+
+    <div class="card" style="margin-top:8px">
+      <h3 style="margin-bottom:12px">Quick examples</h3>
+<pre><span style="color:#64748b"># cURL</span>
+curl -X POST YOUR_URL/predict \
+  -H "Content-Type: application/json" \
+  -d '{"text":"your comment here"}'
+
+<span style="color:#64748b"># JavaScript (fetch)</span>
+const res = await fetch("YOUR_URL/predict", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ text: "your comment here" })
+});
+const data = await res.json();
+console.log(data.result, data.category, data.confidence);</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── STATS ─────────────── -->
+<div id="tab-stats" class="tab-panel">
+  <div class="stats-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2>Live Stats</h2>
+      <button class="btn btn-secondary refresh-btn" onclick="loadStats()">↻ Refresh</button>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-label">Total Checked</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-flagged">—</div><div class="stat-label">Flagged</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-pct">—</div><div class="stat-label">Flag Rate</div></div>
+      <div class="stat-card"><div class="stat-num" id="s-high">—</div><div class="stat-label">High Severity</div></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:16px">Category Breakdown</h3>
+      <ul class="cat-list" id="catList"><li style="color:var(--muted)">Loading…</li></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────── INSTALL ─────────────── -->
+<div id="tab-install" class="tab-panel">
+  <div class="install-wrap">
+    <h2 style="margin-bottom:24px">Chrome Extension Setup</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Download the extension files</h3>
+        <p>The <code>extension/</code> folder contains 3 files:
+          <code>manifest.json</code>, <code>content.js</code>, <code>icons/</code>.
+          Keep them together in one folder.
+        </p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Set your API URL</h3>
+        <p>Open <code>content.js</code> and change line 1:</p>
+        <pre>const API_URL = "<span class="str">https://your-deployed-url.com</span>";</pre>
+        <p>This tells the extension where to send comments for analysis.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Load in Chrome</h3>
+        <ul>
+          <li>Go to <code>chrome://extensions</code></li>
+          <li>Turn on <strong>Developer Mode</strong> (top right)</li>
+          <li>Click <strong>Load unpacked</strong></li>
+          <li>Select your <code>extension/</code> folder</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Supported sites</h3>
+        <p>The extension works on:</p>
+        <ul>
+          <li>YouTube — blurs toxic comments in comment threads</li>
+          <li>Instagram — scans post captions and visible comments</li>
+          <li>Twitter / X — scans tweet replies</li>
+          <li>Reddit — scans post comments</li>
+        </ul>
+        <p style="margin-top:8px">Hover over a blurred comment to preview, click to permanently reveal.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Deploy the API (free)</h3>
+        <p>Recommended free platforms:</p>
+        <ul>
+          <li><strong>Render.com</strong> — connect your GitHub repo, set start command to <code>gunicorn app:app</code></li>
+          <li><strong>Railway.app</strong> — automatic deploys, free tier available</li>
+          <li><strong>Hugging Face Spaces</strong> — great for ML models, free GPU available</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  CyberShield — DistilBERT-powered comment safety &nbsp;·&nbsp; Open Source
+</footer>
+
+<script>
+const API_URL = window.location.origin;
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'stats') loadStats();
+}
+
+async function checkText() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) return;
+
+  const btn     = document.querySelector('.btn-primary');
+  const spinner = document.getElementById('spinner');
+  const box     = document.getElementById('resultBox');
+
+  btn.disabled  = true;
+  spinner.style.display = 'block';
+  box.style.display     = 'none';
+
+  try {
+    const res  = await fetch(API_URL + '/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    renderResult(data);
+  } catch (e) {
+    alert('API error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+function renderResult(data) {
+  const box       = document.getElementById('resultBox');
+  const icon      = document.getElementById('resultIcon');
+  const title     = document.getElementById('resultTitle');
+  const meta      = document.getElementById('resultMeta');
+  const badge     = document.getElementById('severityBadge');
+  const barLabel  = document.getElementById('barLabel');
+  const barFill   = document.getElementById('barFill');
+
+  box.className = 'result-box';
+  box.style.display = 'block';
+
+  const severityColor = { high:'red', medium:'orange', low:'yellow', none:'green' };
+  const badgeClass    = { high:'badge-red', medium:'badge-orange', low:'badge-yellow', none:'badge-green' };
+
+  if (data.result === 1) {
+    const sev = data.severity || 'medium';
+    icon.textContent  = sev === 'high' ? '🚨' : sev === 'medium' ? '⚠️' : '⚡';
+    title.textContent = 'Cyberbullying Detected';
+    meta.textContent  = `Category: ${data.category.replace(/_/g,' ')}`;
+    box.classList.add(sev === 'high' ? 'bullying' : 'medium');
+    badge.textContent = sev.toUpperCase() + ' SEVERITY';
+    badge.className   = 'badge ' + (badgeClass[sev] || 'badge-red');
+    barFill.style.background = sev === 'high' ? '#f87171' : sev === 'medium' ? '#fb923c' : '#fbbf24';
+  } else {
+    icon.textContent  = '✅';
+    title.textContent = 'Safe Comment';
+    meta.textContent  = 'No cyberbullying detected';
+    box.classList.add('safe');
+    badge.textContent  = 'SAFE';
+    badge.className    = 'badge badge-green';
+    barFill.style.background = '#34d399';
+  }
+
+  barLabel.textContent = `Confidence: ${data.confidence}%`;
+  barFill.style.width  = data.confidence + '%';
+}
+
+function clearAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('resultBox').style.display = 'none';
+}
+
+async function loadStats() {
+  try {
+    const res  = await fetch(API_URL + '/stats');
+    const data = await res.json();
+
+    document.getElementById('s-total').textContent   = data.total_checked.toLocaleString();
+    document.getElementById('s-flagged').textContent = data.total_flagged.toLocaleString();
+    document.getElementById('s-pct').textContent     = data.flagged_percent + '%';
+    document.getElementById('s-high').textContent    = (data.severity_breakdown?.high || 0).toLocaleString();
+
+    const cats = data.category_breakdown || {};
+    const total = Object.values(cats).reduce((a,b) => a+b, 0) || 1;
+    const list  = document.getElementById('catList');
+    list.innerHTML = '';
+    for (const [cat, count] of Object.entries(cats).sort((a,b)=>b[1]-a[1])) {
+      const pct = Math.round(count/total*100);
+      list.innerHTML += `
+        <li>
+          <span>${cat.replace(/_/g,' ')}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="cat-bar-bg"><div class="cat-bar" style="width:${pct}%"></div></div>
+            <span style="color:var(--muted);font-size:.85rem;min-width:30px;text-align:right">${count}</span>
+          </div>
+        </li>`;
+    }
+    if (!list.innerHTML) list.innerHTML = '<li style="color:var(--muted)">No data yet.</li>';
+  } catch(e) {
+    console.error('Stats error', e);
+  }
+}
+
+// Enter key to submit
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inputText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) checkText();
+  });
+});
+</script>
+</body>
+</html>

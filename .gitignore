@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+
+cybershield.db
+
+datasets/
+checkpoints/
+
+model/distilbert_model/model.safetensors
+model/distilbert_model/training_args.bin
