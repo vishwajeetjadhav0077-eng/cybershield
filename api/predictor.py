@@ -12,25 +12,28 @@ from transformers import (
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-MODEL_PATH = os.path.join(
+LOCAL_MODEL = os.path.join(
     BASE_DIR,
     "model",
     "distilbert_model"
 )
 
+HF_MODEL = "vishwajeet2577/cybershield-distilbert"
+
 DEVICE = torch.device(
     "cuda" if torch.cuda.is_available() else "cpu"
 )
 
-print("Loading DistilBERT Model...")
+if os.path.exists(os.path.join(LOCAL_MODEL, "model.safetensors")):
+    print("Loading local model...")
+    MODEL_PATH = LOCAL_MODEL
+else:
+    print("Loading model from Hugging Face...")
+    MODEL_PATH = HF_MODEL
 
-tokenizer = DistilBertTokenizerFast.from_pretrained(
-    MODEL_PATH
-)
+tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_PATH)
 
-model = DistilBertForSequenceClassification.from_pretrained(
-    MODEL_PATH
-)
+model = DistilBertForSequenceClassification.from_pretrained(MODEL_PATH)
 
 model.to(DEVICE)
 model.eval()
