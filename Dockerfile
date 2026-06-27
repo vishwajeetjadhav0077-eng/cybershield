@@ -20,4 +20,4 @@ RUN mkdir -p models
 EXPOSE 8000
 
 # 2 workers is enough for CPU inference; add --timeout 120 for slow first loads
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "1", "--timeout", "120"]
